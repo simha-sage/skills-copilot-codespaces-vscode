@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MERN Todo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+      .todo { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; }
+      .completed { text-decoration: line-through; color:#999; }
+      button { margin-left:8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Todo Tracker</h1>
+    <div id="root"></div>
+
+    <!-- React + ReactDOM UMD -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX in-browser (dev only) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      function App() {
+        const [todos, setTodos] = useState([]);
+        const [text, setText] = useState('');
+
+        const load = async () => {
+          const res = await fetch('/api/todos');
+          const data = await res.json();
+          setTodos(data);
+        };
+
+        useEffect(() => { load(); }, []);
+
+        const add = async (e) => {
+          e.preventDefault();
+          if (!text.trim()) return;
+          await fetch('/api/todos', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify({ text: text.trim() })
+          });
+          setText('');
+          load();
+        };
+
+        const toggle = async (id, completed) => {
+          await fetch('/api/todos/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify({ completed: !completed })
+          });
+          load();
+        };
+
+        const remove = async (id) => {
+          await fetch('/api/todos/' + id, { method: 'DELETE' });
+          load();
+        };
+
+        return (
+          <div>
+            <form onSubmit={add}>
+              <input value={text} onChange={e => setText(e.target.value)} placeholder="New todo" />
+              <button type="submit">Add</button>
+            </form>
+
+            <div style={{ marginTop: 20 }}>
+              {todos.length === 0 ? <p>No todos yet</p> : todos.map(t => (
+                <div key={t._id} className="todo">
+                  <div>
+                    <input type="checkbox" checked={t.completed} onChange={() => toggle(t._id, t.completed)} />
+                    <span className={t.completed ? 'completed' : ''} style={{ marginLeft: 8 }}>{t.text}</span>
+                  </div>
+                  <div>
+                    <button onClick={() => remove(t._id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+</html>
